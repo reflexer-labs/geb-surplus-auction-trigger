@@ -18,6 +18,7 @@
 pragma solidity 0.6.7;
 
 abstract contract SAFEEngineLike {
+    function approveSAFEModification(address) virtual external;
     function coinBalance(address) virtual public view returns (uint256);
     function transferInternalCoins(address,address,uint256) virtual external;
 }
@@ -83,10 +84,14 @@ contract SurplusAuctionTrigger {
         require(surplusAuctionHouse_ != address(0), "SurplusAuctionTrigger/null-surplus-auction-house");
         require(accountingEngine_ != address(0), "SurplusAuctionTrigger/null-accounting-engine");
 
+        authorizedAccounts[msg.sender] = 1;
+
         safeEngine                 = SAFEEngineLike(safeEngine_);
         surplusAuctionHouse        = SurplusAuctionHouseLike(surplusAuctionHouse_);
         accountingEngine           = AccountingEngineLike(accountingEngine_);
         surplusAuctionAmountToSell = surplusAuctionAmountToSell_;
+
+        safeEngine.approveSAFEModification(surplusAuctionHouse_);
     }
 
     // --- Boolean Logic ---
@@ -115,6 +120,7 @@ contract SurplusAuctionTrigger {
           "SurplusAuctionTrigger/cannot-transfer-surplus"
         );
 
+        surplusAuctionHouse.contractEnabled() == 0;
         safeEngine.transferInternalCoins(address(this), dst, surplusAmount);
         emit TransferSurplus(dst, surplusAmount);
     }
