@@ -27,7 +27,8 @@ abstract contract SurplusAuctionHouseLike {
     function contractEnabled() virtual public returns (uint256);
 }
 abstract contract AccountingEngineLike {
-    function contractEnabled() virtual public returns (uint256);
+    function surplusAuctionAmountToSell() virtual public view returns (uint256);
+    function contractEnabled() virtual public view returns (uint256);
 }
 
 contract SurplusAuctionTrigger {
@@ -58,9 +59,6 @@ contract SurplusAuctionTrigger {
     }
 
     // --- Variables ---
-    // Amount of surplus stability fees sold in one surplus auction
-    uint256                    public surplusAuctionAmountToSell; // [rad]
-
     // SAFE database
     SAFEEngineLike             public safeEngine;
     // Contract that handles auctions for surplus stability fees
@@ -77,8 +75,7 @@ contract SurplusAuctionTrigger {
     constructor(
       address safeEngine_,
       address surplusAuctionHouse_,
-      address accountingEngine_,
-      uint256 surplusAuctionAmountToSell_
+      address accountingEngine_
     ) public {
         require(safeEngine_ != address(0), "SurplusAuctionTrigger/null-safe-engine");
         require(surplusAuctionHouse_ != address(0), "SurplusAuctionTrigger/null-surplus-auction-house");
@@ -89,7 +86,6 @@ contract SurplusAuctionTrigger {
         safeEngine                 = SAFEEngineLike(safeEngine_);
         surplusAuctionHouse        = SurplusAuctionHouseLike(surplusAuctionHouse_);
         accountingEngine           = AccountingEngineLike(accountingEngine_);
-        surplusAuctionAmountToSell = surplusAuctionAmountToSell_;
 
         safeEngine.approveSAFEModification(surplusAuctionHouse_);
     }
@@ -103,6 +99,8 @@ contract SurplusAuctionTrigger {
      * @notice Start a new surplus auction
     **/
     function auctionSurplus() external returns (uint256 id) {
+        uint256 surplusAuctionAmountToSell = accountingEngine.surplusAuctionAmountToSell();
+
         require(
           safeEngine.coinBalance(address(this)) >= surplusAuctionAmountToSell, "SurplusAuctionTrigger/insufficient-surplus"
         );

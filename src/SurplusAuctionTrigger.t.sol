@@ -23,6 +23,14 @@ contract ShutdownableContract {
     }
 }
 
+contract AccountingEngine is ShutdownableContract {
+    uint256 public surplusAuctionAmountToSell;
+
+    function setAmountToSell(uint256 amount) external {
+        surplusAuctionAmountToSell = amount;
+    }
+}
+
 contract SurplusAuctionTriggerTest is DSTest {
     Hevm hevm;
 
@@ -30,7 +38,7 @@ contract SurplusAuctionTriggerTest is DSTest {
     SAFEEngine safeEngine;
     DSDelegateToken protocolToken;
 
-    ShutdownableContract accountingEngine;
+    AccountingEngine accountingEngine;
     SurplusAuctionTrigger trigger;
 
     uint256 surplusAuctionAmountToSell = 10E45;
@@ -44,13 +52,14 @@ contract SurplusAuctionTriggerTest is DSTest {
         safeEngine = new SAFEEngine();
         protocolToken = new DSDelegateToken('', '');
 
-        accountingEngine = new ShutdownableContract();
+        accountingEngine = new AccountingEngine();
+        accountingEngine.setAmountToSell(surplusAuctionAmountToSell);
 
         surplusAuctionHouse = new RecyclingSurplusAuctionHouse(address(safeEngine), address(protocolToken));
         surplusAuctionHouse.modifyParameters("protocolTokenBidReceiver", address(0x1));
 
         trigger = new SurplusAuctionTrigger(
-          address(safeEngine), address(surplusAuctionHouse), address(accountingEngine), surplusAuctionAmountToSell
+          address(safeEngine), address(surplusAuctionHouse), address(accountingEngine)
         );
         surplusAuctionHouse.addAuthorization(address(trigger));
 
@@ -63,7 +72,6 @@ contract SurplusAuctionTriggerTest is DSTest {
         assertEq(address(trigger.safeEngine()), address(safeEngine));
         assertEq(address(trigger.surplusAuctionHouse()), address(surplusAuctionHouse));
         assertEq(address(trigger.accountingEngine()), address(accountingEngine));
-        assertEq(trigger.surplusAuctionAmountToSell(), surplusAuctionAmountToSell);
     }
     function testFail_not_enough_to_auction() public {
         trigger.auctionSurplus();
